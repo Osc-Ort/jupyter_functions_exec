@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Clase rápida para trabajar con notebooks"
 readme = "README.md"
 license = {text = "MIT"}
-authors = [{name = "Tu Nombre", email = "mail@example.com"}]
+authors = [{name = "Oscar", email = "oscarortegarios@gmail.com"}]
 
 [tool.maturin]
 module-name = "jupyter_functions_exec"  # debe coincidir con él lib.name de Cargo.toml
