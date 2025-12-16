@@ -34,7 +34,7 @@ dependencies = [
 
 [[package]]
 name = "jupyter_functions_exec"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "pyo3",
  "regex",
