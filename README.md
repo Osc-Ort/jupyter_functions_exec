@@ -12,3 +12,8 @@ It gives the JupyterFunctions class.
 - necessary_imports: Returns all the necesary imports.
 
 For each function (for now) we need to import all the imports of the notebook.
+
+To install
+```bash
+  pip install jupyter-functions-exec
+```
