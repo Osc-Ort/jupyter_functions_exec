@@ -9,7 +9,7 @@ description = "Clase rápida para trabajar con notebooks"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "Oscar", email = "oscarortegarios@gmail.com"}]
-requires-python = ">=3.12,<3.13"   # ← solo 3.12
+requires-python = "<3.13"
 
 [tool.maturin]
 module-name = "jupyter_functions_exec"  # debe coincidir con él lib.name de Cargo.toml
