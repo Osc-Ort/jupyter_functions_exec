@@ -28,9 +28,15 @@ jobs:
 
       - name: Build release distributions
         run: |
-          # NOTE: put your own distribution build steps here.
-          python -m pip install build
-          python -m build
+          python -m pip install --upgrade pip
+          python -m pip install maturin
+          maturin build --release
+          mkdir -p dist
+          # Copia las wheels y el sdist si existen
+          cp target/wheels/* dist/ 2>/dev/null || true
+          cp target/sdist/* dist/ 2>/dev/null || true
+          ls -la dist
+      
 
       - name: Upload distributions
         uses: actions/upload-artifact@v4
