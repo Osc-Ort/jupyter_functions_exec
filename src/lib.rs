@@ -197,10 +197,10 @@ fn clean_line_json(line: String) -> String {
         if line[ind..].starts_with('"') {
             let start_quote = ind;
             // buscar índice del último '"' en la línea
-            if let Some(end_quote) = line.rfind('"') {
+            return if let Some(end_quote) = line.rfind('"') {
                 // asegurarnos que el end_quote esté después del start_quote
                 if start_quote + 1 >= end_quote { return String::new(); }
-                let slice = &line[start_quote+1..end_quote];
+                let slice = &line[start_quote + 1..end_quote];
                 // ahora procesar escapes
                 let line_chars: Vec<char> = slice.chars().collect();
                 let mut content = String::with_capacity(line_chars.len());
@@ -208,11 +208,17 @@ fn clean_line_json(line: String) -> String {
                 while i < line_chars.len() {
                     if line_chars[i] == '\\' {
                         if i < line_chars.len() - 1 {
-                            let next = line_chars[i+1];
-                            if next == '"' { content.push('"'); i += 1; }
-                            else if next == '\\' { content.push('\\'); i += 1; }
-                            else if next == 'n' { content.push('\n'); i += 1; }
-                            else { content.push('\\'); }
+                            let next = line_chars[i + 1];
+                            if next == '"' {
+                                content.push('"');
+                                i += 1;
+                            } else if next == '\\' {
+                                content.push('\\');
+                                i += 1;
+                            } else if next == 'n' {
+                                content.push('\n');
+                                i += 1;
+                            } else { content.push('\\'); }
                         } else {
                             content.push('\\');
                         }
@@ -226,9 +232,9 @@ fn clean_line_json(line: String) -> String {
                     content.pop();
                 }
 
-                return content;
+                content
             } else {
-                return String::new();
+                String::new()
             }
         }
     }
