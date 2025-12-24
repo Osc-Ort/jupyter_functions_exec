@@ -1,19 +1,57 @@
 # Jupyter Functions Exec
 
-Simple Python package build in Rust to use functions inside a Jupyter Notebook.
+[![PyPI version](https://badge.fury.io/py/jupyter-functions-exec.svg)](https://badge.fury.io/py/jupyter-functions-exec)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Rust](https://img.shields.io/badge/Built%20with-Rust-orange.svg)](https://www.rust-lang.org/)
 
-It gives the JupyterFunctions class.
+A high-performance Python package built in Rust that allows you to extract and execute functions directly from Jupyter Notebooks (`.ipynb` files).
 
-- Constructor: Simple contructor with the path of the file.
-- exec_function: Execute a function with its arguments.
-- return_function: Return the funtion as an object.
-- exists_function: Returns a boolean of if a function exists.
-- functions_names: Returns a list of all the names of functions.
-- necessary_imports: Returns all the necesary imports.
+## Installation
 
-For each function (for now) we need to import all the imports of the notebook.
-
-To install
 ```bash
-  pip install jupyter-functions-exec
+pip install jupyter-functions-exec
 ```
+
+## API Reference
+
+### `JupyterFunctions(notebook_path: str)`
+
+Creates a new instance by parsing a Jupyter notebook.
+
+---
+
+### `exec_function(name: str, /, *args, **kwargs) -> Any`
+
+Executes a function from the notebook with the provided arguments and returns the result.
+
+---
+
+### `return_function(name: str) -> Callable`
+
+Returns a function object that can be called later.
+
+---
+
+### `exists_function(name: str) -> bool`
+
+Checks if a function exists in the notebook.
+
+---
+
+### `functions_names() -> List[str]`
+
+Returns a list of all function names found in the notebook.
+
+---
+
+### `necessary_imports() -> List[str]`
+
+Returns all import statements found in the notebook.
+
+## License
+
+MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Author
+
+Oscar - oscarortegarios@gmail.com
