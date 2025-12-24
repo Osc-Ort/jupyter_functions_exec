@@ -10,16 +10,16 @@ use std::{
 };
 
 #[pyclass]
-struct JupyterFunctions {
-    functions: HashMap<String, String>,
-    imports: HashSet<String>,
+pub struct JupyterFunctions {
+    pub functions: HashMap<String, String>,
+    pub imports: HashSet<String>,
 }
 
 #[pymethods]
 impl JupyterFunctions {
     #[new]
     #[pyo3(signature = (notebook_path))]
-    fn new(notebook_path: String) -> Self {
+    pub fn new(notebook_path: String) -> Self {
         let mut functions: HashMap<String, String> = HashMap::new();
         let mut imports: HashSet<String> = HashSet::new();
         let raw = fs::read_to_string(notebook_path.clone())
@@ -58,7 +58,7 @@ impl JupyterFunctions {
     }
 
     #[pyo3(signature = (name, /, *args, **kwargs))]
-    fn exec_function<'py>(
+    pub fn exec_function<'py>(
         &self,
         py: Python<'py>,
         name: &str,
@@ -91,7 +91,7 @@ impl JupyterFunctions {
     }
 
     #[pyo3(signature = (name))]
-    fn return_function<'py>(&self, py: Python<'py>, name: &str) -> PyResult<Py<PyAny>> {
+    pub fn return_function<'py>(&self, py: Python<'py>, name: &str) -> PyResult<Py<PyAny>> {
         if !self.functions.contains_key(name) {
             return Err(PyRuntimeError::new_err(format!(
                 "{} doesn't exist in the notebook.",
@@ -115,20 +115,20 @@ impl JupyterFunctions {
         Ok(func.unbind())
     }
 
-    fn exists_function(&self, name_of_function: String) -> bool {
+    pub fn exists_function(&self, name_of_function: String) -> bool {
         self.functions.contains_key(&name_of_function)
     }
 
-    fn functions_names(&self) -> Vec<String> {
+    pub fn functions_names(&self) -> Vec<String> {
         self.functions.keys().cloned().collect()
     }
 
-    fn necessary_imports(&self) -> Vec<String> {
+    pub fn necessary_imports(&self) -> Vec<String> {
         self.imports.iter().cloned().collect()
     }
 }
 
-fn process_code(
+pub fn process_code(
     functions: &mut HashMap<String, String>,
     imports: &mut HashSet<String>,
     raw_lines: Vec<String>,
@@ -183,7 +183,7 @@ fn process_code(
 }
 
 // Function to clean all the JSON quoting of the notebook.
-fn clean_line_json(line: String) -> String {
+pub fn clean_line_json(line: String) -> String {
     let first_non_whitespace = line.find(|c| c != ' ' && c != '\t');
     if let Some(ind) = first_non_whitespace {
         if line[ind..].starts_with('"') {
@@ -237,7 +237,7 @@ fn clean_line_json(line: String) -> String {
     String::new()
 }
 
-fn imports_as_lines(notebook: &JupyterFunctions) -> String {
+pub fn imports_as_lines(notebook: &JupyterFunctions) -> String {
     notebook.imports.iter().map(|e| e.clone() + "\n").collect()
 }
 
@@ -246,3 +246,6 @@ fn jupyter_functions_exec(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<JupyterFunctions>()?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;
