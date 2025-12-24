@@ -1,0 +1,14 @@
+# Marcar archivos generados para que GitHub no los cuente en estadísticas
+*.lock linguist-generated=true
+Cargo.lock linguist-generated=true
+
+# Asegurar que Rust sea detectado como lenguaje principal
+*.rs linguist-detectable=true
+
+# Ignorar archivos de configuración en estadísticas
+*.toml linguist-documentation=true
+*.md linguist-documentation=true
+*.json linguist-documentation=true
+
+# Ignorar archivos de test fixtures
+tests/fixtures/* linguist-vendored=true
