@@ -1,17 +1,17 @@
 use pyo3::prelude::*;
 
-use std::{
-    fs,
-    collections::{HashSet, HashMap},
-};
-use pyo3::types::{PyDict, PyTuple, PyModule};
 use pyo3::exceptions::PyRuntimeError;
+use pyo3::types::{PyDict, PyModule, PyTuple};
 use regex::Regex;
 use std::ffi::CString;
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+};
 
 #[pyclass]
 struct JupyterFunctions {
-    functions: HashMap<String,String>,
+    functions: HashMap<String, String>,
     imports: HashSet<String>,
 }
 
@@ -20,10 +20,10 @@ impl JupyterFunctions {
     #[new]
     #[pyo3(signature = (notebook_path))]
     fn new(notebook_path: String) -> Self {
-        let mut functions: HashMap<String,String> = HashMap::new();
+        let mut functions: HashMap<String, String> = HashMap::new();
         let mut imports: HashSet<String> = HashSet::new();
         let raw = fs::read_to_string(notebook_path.clone())
-            .expect(format!("Error opening the notebook {}",notebook_path).as_str());
+            .expect(format!("Error opening the notebook {}", notebook_path).as_str());
         let archive: Vec<String> = raw.lines().map(String::from).collect();
         let n = archive.len();
         let mut i = 0;
@@ -44,7 +44,8 @@ impl JupyterFunctions {
                         first_non_whitespace.map_or(false, |pos| s[pos..].starts_with(']'))
                     }) {
                         // pos es relativo; tomar pos+1 líneas (incluimos la línea que contiene ']')
-                        let slice_lines: Vec<String> = archive.iter().skip(ini).take(pos + 1).cloned().collect();
+                        let slice_lines: Vec<String> =
+                            archive.iter().skip(ini).take(pos + 1).cloned().collect();
                         process_code(&mut functions, &mut imports, slice_lines);
                         // avanzar i al índice absoluto del final
                         i = ini + pos;
@@ -53,7 +54,7 @@ impl JupyterFunctions {
             }
             i += 1;
         }
-        Self {functions, imports}
+        Self { functions, imports }
     }
 
     #[pyo3(signature = (name, /, *args, **kwargs))]
@@ -64,7 +65,6 @@ impl JupyterFunctions {
         args: &Bound<'py, PyTuple>,
         kwargs: Option<&Bound<'py, PyDict>>,
     ) -> PyResult<Py<PyAny>> {
-
         if !self.functions.contains_key(name) {
             return Err(PyRuntimeError::new_err(format!(
                 "{} doesn't exist in the notebook.",
@@ -83,10 +83,7 @@ impl JupyterFunctions {
 
         // Obtiene la función y la ejecuta con *args y **kwargs
         let func = globals.get_item(name)?.ok_or_else(|| {
-            PyRuntimeError::new_err(format!(
-                "{} wasn't defined after executing code.",
-                name
-            ))
+            PyRuntimeError::new_err(format!("{} wasn't defined after executing code.", name))
         })?;
 
         let result = func.call(args, kwargs)?;
@@ -94,11 +91,7 @@ impl JupyterFunctions {
     }
 
     #[pyo3(signature = (name))]
-    fn return_function<'py>(
-        &self,
-        py: Python<'py>,
-        name: &str,
-    ) -> PyResult<Py<PyAny>> {
+    fn return_function<'py>(&self, py: Python<'py>, name: &str) -> PyResult<Py<PyAny>> {
         if !self.functions.contains_key(name) {
             return Err(PyRuntimeError::new_err(format!(
                 "{} doesn't exist in the notebook.",
@@ -116,10 +109,7 @@ impl JupyterFunctions {
 
         // Obtiene la función y la devuelve sin invocarla
         let func = globals.get_item(name)?.ok_or_else(|| {
-            PyRuntimeError::new_err(format!(
-                "{} wasn't defined after executing code.",
-                name
-            ))
+            PyRuntimeError::new_err(format!("{} wasn't defined after executing code.", name))
         })?;
 
         Ok(func.unbind())
@@ -139,14 +129,14 @@ impl JupyterFunctions {
 }
 
 fn process_code(
-    functions: &mut HashMap<String,String>,
+    functions: &mut HashMap<String, String>,
     imports: &mut HashSet<String>,
-    raw_lines: Vec<String>)
-{
+    raw_lines: Vec<String>,
+) {
     let code_lines: Vec<String> = raw_lines.into_iter().map(|e| clean_line_json(e)).collect();
     // Import form
-    let import_regex = Regex::new(r"(^\s*(import|from)\s+)")
-        .expect("Error making the regex processing the code.");
+    let import_regex =
+        Regex::new(r"(^\s*(import|from)\s+)").expect("Error making the regex processing the code.");
     let conj_import: HashSet<String> = code_lines
         .iter()
         .filter(|&e| import_regex.is_match(e))
@@ -154,8 +144,8 @@ fn process_code(
         .collect();
     imports.extend(conj_import);
     // Functions form
-    let func_regex = Regex::new(r"^def\s+(\w+)\s*\(")
-        .expect("Error making the regex processing the code.");
+    let func_regex =
+        Regex::new(r"^def\s+(\w+)\s*\(").expect("Error making the regex processing the code.");
     let mut i = 0;
     while i < code_lines.len() {
         let line = code_lines[i].clone();
@@ -184,7 +174,9 @@ fn process_code(
             }
 
             functions.insert(func_name, func_body);
-            if j > i { i = j - 1; }
+            if j > i {
+                i = j - 1;
+            }
         }
         i += 1;
     }
@@ -199,7 +191,9 @@ fn clean_line_json(line: String) -> String {
             // buscar índice del último '"' en la línea
             return if let Some(end_quote) = line.rfind('"') {
                 // asegurarnos que el end_quote esté después del start_quote
-                if start_quote + 1 >= end_quote { return String::new(); }
+                if start_quote + 1 >= end_quote {
+                    return String::new();
+                }
                 let slice = &line[start_quote + 1..end_quote];
                 // ahora procesar escapes
                 let line_chars: Vec<char> = slice.chars().collect();
@@ -218,7 +212,9 @@ fn clean_line_json(line: String) -> String {
                             } else if next == 'n' {
                                 content.push('\n');
                                 i += 1;
-                            } else { content.push('\\'); }
+                            } else {
+                                content.push('\\');
+                            }
                         } else {
                             content.push('\\');
                         }
@@ -235,7 +231,7 @@ fn clean_line_json(line: String) -> String {
                 content
             } else {
                 String::new()
-            }
+            };
         }
     }
     String::new()
