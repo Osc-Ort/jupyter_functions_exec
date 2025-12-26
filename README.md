@@ -1,6 +1,6 @@
 # Jupyter Functions Exec
 
-[![PyPI version](https://badge.fury.io/py/jupyter-functions-exec.svg)](https://badge.fury.io/py/jupyter-functions-exec)
+[![PyPI version](https://badge.fury.io/py/jupyter-functions-exec.svg)](https://badge.fury.io/py/jupyter-functions-exec) 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/Built%20with-Rust-orange.svg)](https://www.rust-lang.org/)
 
