@@ -1,10 +1,11 @@
+use pyo3::Python;
 use pyo3::prelude::*;
 
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::types::{PyDict, PyModule, PyTuple};
 use regex::Regex;
 use std::ffi::CString;
-use std::{collections::HashSet, fs};
+use std::{collections::HashSet, fs, sync::Once};
 
 #[pyclass]
 pub struct JupyterFunctions {
@@ -203,13 +204,52 @@ pub fn process_code(
                 }
             }
 
-            functions.push((func_name, func_body));
+            // Validate the extracted function code by attempting to compile it with Python.
+            // Only store functions that successfully compile to avoid retaining incomplete/invalid code.
+            if is_valid_python_code(&func_body) {
+                functions.push((func_name, func_body));
+            } else {
+                // If invalid, skip storing it. Optionally, we could log or collect invalid names.
+                // For now we silently ignore invalid/incomplete functions so only valid ones are saved.
+            }
+
             if j > i {
                 i = j - 1;
             }
         }
         i += 1;
     }
+}
+
+/// Try to compile Python code to ensure it's syntactically valid.
+/// This uses Python's built-in compile() in a GIL-protected context and returns true when compilation succeeds.
+static INIT_PY: Once = Once::new();
+
+fn ensure_python_initialized() {
+    INIT_PY.call_once(|| {
+        // Initialize the Python interpreter so pyo3 APIs can be used from Rust tests
+        // when the `auto-initialize` feature is not enabled.
+        // Use the recommended initialization API.
+        Python::initialize();
+    });
+}
+
+/// Try to compile Python code to ensure it's syntactically valid.
+/// This uses Python's builtins.compile to avoid executing the code; compile will raise on syntax errors.
+pub fn is_valid_python_code(code: &str) -> bool {
+    // Make sure the Python interpreter is initialized before attempting to attach/enter it.
+    ensure_python_initialized();
+
+    Python::attach(|py| {
+        // Use builtins.compile to avoid executing the code; compile will raise on syntax errors.
+        match py.import("builtins") {
+            Ok(builtins) => match builtins.getattr("compile") {
+                Ok(compile_fn) => compile_fn.call1((code, "<string>", "exec")).is_ok(),
+                Err(_) => false,
+            },
+            Err(_) => false,
+        }
+    })
 }
 
 // Function to clean all the JSON quoting of the notebook.
