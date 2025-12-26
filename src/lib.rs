@@ -212,6 +212,12 @@ pub fn clean_line_json(line: String) -> String {
                             } else if next == 'n' {
                                 content.push('\n');
                                 i += 1;
+                            } else if next == 't' {
+                                content.push('\t');
+                                i += 1;
+                            } else if next == 'r' {
+                                content.push('\r');
+                                i += 1;
                             } else {
                                 content.push('\\');
                             }
