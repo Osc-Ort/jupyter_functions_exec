@@ -13,7 +13,7 @@
 
 use super::fixture_path;
 use crate::{JupyterFunctions, clean_line_json, imports_as_lines, process_code};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 // ============================================================================
 // Tests de clean_line_json
@@ -160,7 +160,7 @@ fn test_clean_line_json_tabs_y_espacios() {
 #[test]
 fn test_process_code_extrae_funcion_simple() {
     // Dado: líneas de código con una función simple
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"def mi_funcion():\""),
@@ -171,8 +171,13 @@ fn test_process_code_extrae_funcion_simple() {
     process_code(&mut functions, &mut imports, lines);
 
     // Entonces: debe extraer la función
-    assert!(functions.contains_key("mi_funcion"));
-    let body = functions.get("mi_funcion").unwrap();
+    assert!(functions.iter().any(|(n, _)| n == "mi_funcion"));
+    let body = functions
+        .iter()
+        .find(|(n, _)| n == "mi_funcion")
+        .unwrap()
+        .1
+        .clone();
     assert!(body.contains("def mi_funcion():"));
     assert!(body.contains("return 42"));
 }
@@ -180,7 +185,7 @@ fn test_process_code_extrae_funcion_simple() {
 #[test]
 fn test_process_code_extrae_imports() {
     // Dado: líneas con imports
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"import os\""),
@@ -201,7 +206,7 @@ fn test_process_code_extrae_imports() {
 #[test]
 fn test_process_code_funcion_con_lineas_vacias() {
     // Dado: una función con líneas vacías intermedias
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"def funcion_con_espacios():\""),
@@ -214,13 +219,13 @@ fn test_process_code_funcion_con_lineas_vacias() {
     process_code(&mut functions, &mut imports, lines);
 
     // Entonces: debe incluir la función completa
-    assert!(functions.contains_key("funcion_con_espacios"));
+    assert!(functions.iter().any(|(n, _)| n == "funcion_con_espacios"));
 }
 
 #[test]
 fn test_process_code_multiples_funciones() {
     // Dado: código con múltiples funciones
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"def primera():\""),
@@ -234,14 +239,14 @@ fn test_process_code_multiples_funciones() {
     process_code(&mut functions, &mut imports, lines);
 
     // Entonces: debe extraer ambas funciones
-    assert!(functions.contains_key("primera"));
-    assert!(functions.contains_key("segunda"));
+    assert!(functions.iter().any(|(n, _)| n == "primera"));
+    assert!(functions.iter().any(|(n, _)| n == "segunda"));
 }
 
 #[test]
 fn test_process_code_funcion_con_comentarios() {
     // Dado: una función con comentarios
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"def con_comentario():\""),
@@ -253,14 +258,19 @@ fn test_process_code_funcion_con_comentarios() {
     process_code(&mut functions, &mut imports, lines);
 
     // Entonces: debe incluir el comentario en el cuerpo
-    let body = functions.get("con_comentario").unwrap();
+    let body = functions
+        .iter()
+        .find(|(n, _)| n == "con_comentario")
+        .unwrap()
+        .1
+        .clone();
     assert!(body.contains("# Este es un comentario"));
 }
 
 #[test]
 fn test_process_code_sin_funciones_ni_imports() {
     // Dado: código sin funciones ni imports
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"x = 1\""),
@@ -279,7 +289,7 @@ fn test_process_code_sin_funciones_ni_imports() {
 #[test]
 fn test_process_code_funcion_con_parametros() {
     // Dado: una función con parámetros
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"def funcion_params(a, b, c=10):\""),
@@ -290,15 +300,20 @@ fn test_process_code_funcion_con_parametros() {
     process_code(&mut functions, &mut imports, lines);
 
     // Entonces: debe extraer la función con sus parámetros
-    assert!(functions.contains_key("funcion_params"));
-    let body = functions.get("funcion_params").unwrap();
+    assert!(functions.iter().any(|(n, _)| n == "funcion_params"));
+    let body = functions
+        .iter()
+        .find(|(n, _)| n == "funcion_params")
+        .unwrap()
+        .1
+        .clone();
     assert!(body.contains("a, b, c=10"));
 }
 
 #[test]
 fn test_process_code_import_from_con_multiples_items() {
     // Dado: un import con múltiples items
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![String::from(
         "    \"from typing import List, Dict, Optional\"",
@@ -316,7 +331,7 @@ fn test_process_code_import_from_con_multiples_items() {
 #[test]
 fn test_process_code_import_as() {
     // Dado: un import con alias
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![String::from("    \"import numpy as np\"")];
 
@@ -350,7 +365,7 @@ fn test_imports_as_lines_genera_string_correcto() {
 fn test_imports_as_lines_sin_imports() {
     // Dado: un notebook sin imports
     let jf = JupyterFunctions {
-        functions: HashMap::new(),
+        functions: Vec::new(),
         imports: HashSet::new(),
     };
 
@@ -440,7 +455,7 @@ fn test_new_maneja_notebook_sin_source() {
 #[test]
 fn test_regex_import_simple() {
     // Dado: diferentes formatos de import
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"import math\""),
@@ -457,7 +472,7 @@ fn test_regex_import_simple() {
 #[test]
 fn test_regex_from_import() {
     // Dado: imports con from
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"from os import path\""),
@@ -478,7 +493,7 @@ fn test_regex_from_import() {
 #[test]
 fn test_regex_funcion_nombre_con_underscores() {
     // Dado: una función con underscores en el nombre
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"def mi_funcion_larga():\""),
@@ -489,13 +504,13 @@ fn test_regex_funcion_nombre_con_underscores() {
     process_code(&mut functions, &mut imports, lines);
 
     // Entonces: debe capturar el nombre completo
-    assert!(functions.contains_key("mi_funcion_larga"));
+    assert!(functions.iter().any(|(n, _)| n == "mi_funcion_larga"));
 }
 
 #[test]
 fn test_regex_funcion_nombre_con_numeros() {
     // Dado: una función con números en el nombre
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"def funcion123():\""),
@@ -506,5 +521,5 @@ fn test_regex_funcion_nombre_con_numeros() {
     process_code(&mut functions, &mut imports, lines);
 
     // Entonces: debe capturar el nombre
-    assert!(functions.contains_key("funcion123"));
+    assert!(functions.iter().any(|(n, _)| n == "funcion123"));
 }

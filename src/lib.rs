@@ -4,14 +4,11 @@ use pyo3::exceptions::PyRuntimeError;
 use pyo3::types::{PyDict, PyModule, PyTuple};
 use regex::Regex;
 use std::ffi::CString;
-use std::{
-    collections::{HashMap, HashSet},
-    fs,
-};
+use std::{collections::HashSet, fs};
 
 #[pyclass]
 pub struct JupyterFunctions {
-    pub functions: HashMap<String, String>,
+    pub functions: Vec<(String, String)>,
     pub imports: HashSet<String>,
 }
 
@@ -20,7 +17,7 @@ impl JupyterFunctions {
     #[new]
     #[pyo3(signature = (notebook_path))]
     pub fn new(notebook_path: String) -> Self {
-        let mut functions: HashMap<String, String> = HashMap::new();
+        let mut functions: Vec<(String, String)> = Vec::new();
         let mut imports: HashSet<String> = HashSet::new();
         let raw = fs::read_to_string(notebook_path.clone())
             .expect(format!("Error opening the notebook {}", notebook_path).as_str());
@@ -65,7 +62,7 @@ impl JupyterFunctions {
         args: &Bound<'py, PyTuple>,
         kwargs: Option<&Bound<'py, PyDict>>,
     ) -> PyResult<Py<PyAny>> {
-        if !self.functions.contains_key(name) {
+        if !self.functions.iter().any(|(n, _)| n == name) {
             return Err(PyRuntimeError::new_err(format!(
                 "{} doesn't exist in the notebook.",
                 name
@@ -75,7 +72,10 @@ impl JupyterFunctions {
         let main = PyModule::import(py, "__main__")?;
         let globals = main.dict();
 
-        let code = imports_as_lines(self) + self.functions.get(name).unwrap();
+        let mut code = imports_as_lines(self);
+        for (_, func_code) in &self.functions {
+            code += func_code;
+        }
 
         let c_code = CString::new(code)
             .map_err(|_| PyRuntimeError::new_err("Código Python contiene byte nulo (\\0)"))?;
@@ -92,7 +92,7 @@ impl JupyterFunctions {
 
     #[pyo3(signature = (name))]
     pub fn return_function<'py>(&self, py: Python<'py>, name: &str) -> PyResult<Py<PyAny>> {
-        if !self.functions.contains_key(name) {
+        if !self.functions.iter().any(|(n, _)| n == name) {
             return Err(PyRuntimeError::new_err(format!(
                 "{} doesn't exist in the notebook.",
                 name
@@ -102,7 +102,10 @@ impl JupyterFunctions {
         let main = PyModule::import(py, "__main__")?;
         let globals = main.dict();
 
-        let code = imports_as_lines(self) + self.functions.get(name).unwrap();
+        let mut code = imports_as_lines(self);
+        for (_, func_code) in &self.functions {
+            code += func_code;
+        }
         let c_code = CString::new(code)
             .map_err(|_| PyRuntimeError::new_err("Código Python contiene byte nulo (\\0)"))?;
         py.run(&c_code, Some(&globals), None)?;
@@ -116,11 +119,14 @@ impl JupyterFunctions {
     }
 
     pub fn exists_function(&self, name_of_function: String) -> bool {
-        self.functions.contains_key(&name_of_function)
+        self.functions.iter().any(|(n, _)| n == &name_of_function)
     }
 
     pub fn functions_names(&self) -> Vec<String> {
-        self.functions.keys().cloned().collect()
+        let mut names: Vec<String> = self.functions.iter().map(|(n, _)| n.clone()).collect();
+        names.sort();
+        names.dedup();
+        names
     }
 
     pub fn necessary_imports(&self) -> Vec<String> {
@@ -129,19 +135,31 @@ impl JupyterFunctions {
 
     /// Devuelve el código extraído de una función para debug
     pub fn get_function_code(&self, name: String) -> Option<String> {
-        self.functions.get(&name).cloned()
+        self.functions
+            .iter()
+            .rev()
+            .find(|(n, _)| n == &name)
+            .map(|(_, c)| c.clone())
     }
 
     /// Devuelve el código completo que se ejecutaría (imports + función)
     pub fn get_full_code(&self, name: String) -> Option<String> {
         self.functions
-            .get(&name)
-            .map(|func_code| imports_as_lines(self) + func_code)
+            .iter()
+            .rev()
+            .find(|(n, _)| n == &name)
+            .map(|(_, _)| {
+                let mut code = imports_as_lines(self);
+                for (_, f_code) in &self.functions {
+                    code += f_code;
+                }
+                code
+            })
     }
 }
 
 pub fn process_code(
-    functions: &mut HashMap<String, String>,
+    functions: &mut Vec<(String, String)>,
     imports: &mut HashSet<String>,
     raw_lines: Vec<String>,
 ) {
@@ -185,7 +203,7 @@ pub fn process_code(
                 }
             }
 
-            functions.insert(func_name, func_body);
+            functions.push((func_name, func_body));
             if j > i {
                 i = j - 1;
             }

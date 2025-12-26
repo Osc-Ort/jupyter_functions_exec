@@ -14,7 +14,7 @@
 
 use super::fixture_path;
 use crate::{JupyterFunctions, process_code};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 // ============================================================================
 // Tests que verifican estructura interna a través de interfaz
@@ -48,7 +48,13 @@ fn test_funcion_contiene_cuerpo_completo() {
     assert!(jf.exists_function(String::from("factorial")));
 
     // Y accedemos al cuerpo interno (conocimiento de implementación)
-    let body = jf.functions.get("factorial").unwrap();
+    let body = jf
+        .functions
+        .iter()
+        .find(|(n, _)| n == "factorial")
+        .unwrap()
+        .1
+        .clone();
 
     // Entonces: debe contener toda la lógica de la función
     assert!(body.contains("def factorial"), "Debe tener la definición");
@@ -66,7 +72,13 @@ fn test_funcion_con_docstring_preserva_formato() {
     assert!(jf.exists_function(String::from("multiplicar")));
 
     // Entonces: el cuerpo debe preservar el docstring
-    let body = jf.functions.get("multiplicar").unwrap();
+    let body = jf
+        .functions
+        .iter()
+        .find(|(n, _)| n == "multiplicar")
+        .unwrap()
+        .1
+        .clone();
     assert!(
         body.contains("Multiplica dos números") || body.contains("\"\"\""),
         "Debe preservar el docstring o su contenido"
@@ -103,7 +115,13 @@ fn test_funcion_closure_detecta_funcion_externa() {
 
     // Entonces: debe incluir la función interna en el cuerpo
     // (sabemos cómo process_code maneja indentación)
-    let body = jf.functions.get("funcion_con_closure").unwrap();
+    let body = jf
+        .functions
+        .iter()
+        .find(|(n, _)| n == "funcion_con_closure")
+        .unwrap()
+        .1
+        .clone();
     assert!(
         body.contains("def incrementar"),
         "Debe incluir la función anidada"
@@ -125,8 +143,20 @@ fn test_indentacion_determina_fin_de_funcion() {
     assert!(nombres.contains(&String::from("otra_funcion_en_misma_celda")));
 
     // Y sus cuerpos deben ser distintos
-    let body1 = jf.functions.get("funcion_con_decorador_simulado").unwrap();
-    let body2 = jf.functions.get("otra_funcion_en_misma_celda").unwrap();
+    let body1 = jf
+        .functions
+        .iter()
+        .find(|(n, _)| n == "funcion_con_decorador_simulado")
+        .unwrap()
+        .1
+        .clone();
+    let body2 = jf
+        .functions
+        .iter()
+        .find(|(n, _)| n == "otra_funcion_en_misma_celda")
+        .unwrap()
+        .1
+        .clone();
     assert_ne!(body1, body2, "Los cuerpos deben ser diferentes");
 }
 
@@ -140,7 +170,13 @@ fn test_caracteres_especiales_en_strings_python() {
     assert!(jf.exists_function(String::from("funcion_con_string_especial")));
 
     // Entonces: el cuerpo debe tener los escapes procesados correctamente
-    let body = jf.functions.get("funcion_con_string_especial").unwrap();
+    let body = jf
+        .functions
+        .iter()
+        .find(|(n, _)| n == "funcion_con_string_especial")
+        .unwrap()
+        .1
+        .clone();
     // Verificamos que el código es válido (tiene la estructura esperada)
     assert!(body.contains("texto"), "Debe contener la variable 'texto'");
 }
@@ -155,7 +191,13 @@ fn test_funcion_vacia_con_pass() {
     assert!(jf.exists_function(String::from("funcion_vacia")));
 
     // Entonces: debe tener un cuerpo mínimo con pass
-    let body = jf.functions.get("funcion_vacia").unwrap();
+    let body = jf
+        .functions
+        .iter()
+        .find(|(n, _)| n == "funcion_vacia")
+        .unwrap()
+        .1
+        .clone();
     assert!(body.contains("pass"), "Debe contener 'pass'");
 }
 
@@ -169,7 +211,13 @@ fn test_try_except_preserva_estructura() {
     assert!(jf.exists_function(String::from("funcion_con_try_except")));
 
     // Entonces: debe preservar toda la estructura del try/except
-    let body = jf.functions.get("funcion_con_try_except").unwrap();
+    let body = jf
+        .functions
+        .iter()
+        .find(|(n, _)| n == "funcion_con_try_except")
+        .unwrap()
+        .1
+        .clone();
     assert!(body.contains("try"), "Debe contener 'try'");
     assert!(body.contains("except"), "Debe contener 'except'");
     assert!(body.contains("finally"), "Debe contener 'finally'");
@@ -185,7 +233,13 @@ fn test_parametros_con_valores_default() {
     assert!(jf.exists_function(String::from("saludar")));
 
     // Entonces: debe preservar los parámetros con sus valores default
-    let body = jf.functions.get("saludar").unwrap();
+    let body = jf
+        .functions
+        .iter()
+        .find(|(n, _)| n == "saludar")
+        .unwrap()
+        .1
+        .clone();
     assert!(
         body.contains("saludo=") || body.contains("saludo ="),
         "Debe preservar el parámetro con valor por defecto"
@@ -202,7 +256,13 @@ fn test_lambda_dentro_de_funcion() {
     assert!(jf.exists_function(String::from("funcion_con_lambda")));
 
     // Entonces: el lambda debe estar en el cuerpo
-    let body = jf.functions.get("funcion_con_lambda").unwrap();
+    let body = jf
+        .functions
+        .iter()
+        .find(|(n, _)| n == "funcion_con_lambda")
+        .unwrap()
+        .1
+        .clone();
     assert!(body.contains("lambda"), "Debe contener la expresión lambda");
 }
 
@@ -213,7 +273,7 @@ fn test_lambda_dentro_de_funcion() {
 #[test]
 fn test_solo_comentarios_sin_funcion() {
     // Dado: código que es solo comentarios (sin def)
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"# Solo un comentario\""),
@@ -233,7 +293,7 @@ fn test_solo_comentarios_sin_funcion() {
 #[test]
 fn test_import_con_indentacion() {
     // Dado: imports con diferentes indentaciones
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"import os\""),
@@ -255,7 +315,7 @@ fn test_import_con_indentacion() {
 #[test]
 fn test_imports_y_funciones_se_procesan_juntos() {
     // Dado: código con imports y funciones mezclados
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"import math\""),
@@ -269,7 +329,10 @@ fn test_imports_y_funciones_se_procesan_juntos() {
 
     // Entonces: debe tener ambos
     assert!(!imports.is_empty(), "Debe tener imports");
-    assert!(functions.contains_key("usar_math"), "Debe tener la función");
+    assert!(
+        functions.iter().any(|(n, _)| n == "usar_math"),
+        "Debe tener la función"
+    );
 }
 
 #[test]
@@ -281,11 +344,11 @@ fn test_hashmap_funciones_permite_acceso_por_nombre() {
     // Cuando: accedemos a funciones por nombre (conociendo que es un HashMap)
     let nombres = jf.functions_names();
 
-    // Entonces: cada nombre debe ser una clave válida en el HashMap interno
+    // Entonces: cada nombre debe existir en el Vec interno
     for nombre in &nombres {
         assert!(
-            jf.functions.contains_key(nombre),
-            "El nombre '{}' debe ser una clave en el HashMap",
+            jf.functions.iter().any(|(n, _)| n == nombre),
+            "El nombre '{}' debe existir en el Vec",
             nombre
         );
     }
@@ -294,7 +357,7 @@ fn test_hashmap_funciones_permite_acceso_por_nombre() {
 #[test]
 fn test_imports_hashset_evita_duplicados() {
     // Dado: código con imports duplicados
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"import os\""),
@@ -319,7 +382,13 @@ fn test_funcion_multilinea_parametros() {
     assert!(jf.exists_function(String::from("funcion_multilinea")));
 
     // Entonces: el cuerpo debe contener todos los parámetros
-    let body = jf.functions.get("funcion_multilinea").unwrap();
+    let body = jf
+        .functions
+        .iter()
+        .find(|(n, _)| n == "funcion_multilinea")
+        .unwrap()
+        .1
+        .clone();
     assert!(body.contains("param1"), "Debe contener param1");
     assert!(body.contains("param2"), "Debe contener param2");
     assert!(body.contains("param3"), "Debe contener param3");
@@ -367,7 +436,7 @@ fn test_cuerpo_funcion_empieza_con_def() {
 #[test]
 fn test_regex_no_captura_def_en_strings() {
     // Dado: código con 'def' dentro de un string (no es definición de función)
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![String::from("    \"x = 'def not_a_function(): pass'\"")];
 
@@ -378,7 +447,7 @@ fn test_regex_no_captura_def_en_strings() {
     // Nota: Esto depende de cómo el regex maneja el caso - verificamos el comportamiento actual
     // El regex ^def\s+(\w+)\s*\( solo captura 'def' al inicio de la línea limpia
     assert!(
-        !functions.contains_key("not_a_function"),
+        !functions.iter().any(|(n, _)| n == "not_a_function"),
         "No debe capturar 'def' dentro de strings"
     );
 }
@@ -386,7 +455,7 @@ fn test_regex_no_captura_def_en_strings() {
 #[test]
 fn test_import_regex_requiere_espacio_despues() {
     // Dado: código donde 'import' es parte de otro identificador
-    let mut functions = HashMap::new();
+    let mut functions: Vec<(String, String)> = Vec::new();
     let mut imports = HashSet::new();
     let lines = vec![
         String::from("    \"reimport = True\""), // no es import
