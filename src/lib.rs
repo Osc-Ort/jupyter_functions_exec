@@ -126,6 +126,18 @@ impl JupyterFunctions {
     pub fn necessary_imports(&self) -> Vec<String> {
         self.imports.iter().cloned().collect()
     }
+
+    /// Devuelve el código extraído de una función para debug
+    pub fn get_function_code(&self, name: String) -> Option<String> {
+        self.functions.get(&name).cloned()
+    }
+
+    /// Devuelve el código completo que se ejecutaría (imports + función)
+    pub fn get_full_code(&self, name: String) -> Option<String> {
+        self.functions
+            .get(&name)
+            .map(|func_code| imports_as_lines(self) + func_code)
+    }
 }
 
 pub fn process_code(
@@ -134,9 +146,9 @@ pub fn process_code(
     raw_lines: Vec<String>,
 ) {
     let code_lines: Vec<String> = raw_lines.into_iter().map(|e| clean_line_json(e)).collect();
-    // Import form
+    // Import form - solo imports sin indentación (nivel raíz)
     let import_regex =
-        Regex::new(r"(^\s*(import|from)\s+)").expect("Error making the regex processing the code.");
+        Regex::new(r"^(import|from)\s+").expect("Error making the regex processing the code.");
     let conj_import: HashSet<String> = code_lines
         .iter()
         .filter(|&e| import_regex.is_match(e))
@@ -203,23 +215,76 @@ pub fn clean_line_json(line: String) -> String {
                     if line_chars[i] == '\\' {
                         if i < line_chars.len() - 1 {
                             let next = line_chars[i + 1];
-                            if next == '"' {
-                                content.push('"');
-                                i += 1;
-                            } else if next == '\\' {
-                                content.push('\\');
-                                i += 1;
-                            } else if next == 'n' {
-                                content.push('\n');
-                                i += 1;
-                            } else if next == 't' {
-                                content.push('\t');
-                                i += 1;
-                            } else if next == 'r' {
-                                content.push('\r');
-                                i += 1;
-                            } else {
-                                content.push('\\');
+                            match next {
+                                '"' => {
+                                    content.push('"');
+                                    i += 1;
+                                }
+                                '\\' => {
+                                    content.push('\\');
+                                    i += 1;
+                                }
+                                'n' => {
+                                    content.push('\n');
+                                    i += 1;
+                                }
+                                't' => {
+                                    content.push('\t');
+                                    i += 1;
+                                }
+                                'r' => {
+                                    content.push('\r');
+                                    i += 1;
+                                }
+                                'b' => {
+                                    content.push('\x08'); // backspace
+                                    i += 1;
+                                }
+                                'f' => {
+                                    content.push('\x0C'); // form feed
+                                    i += 1;
+                                }
+                                '/' => {
+                                    content.push('/');
+                                    i += 1;
+                                }
+                                '\'' => {
+                                    content.push('\'');
+                                    i += 1;
+                                }
+                                'u' => {
+                                    // Secuencia Unicode \uXXXX
+                                    if i + 5 < line_chars.len() {
+                                        let hex: String = line_chars[i + 2..i + 6].iter().collect();
+                                        if let Ok(code) = u32::from_str_radix(&hex, 16) {
+                                            if let Some(c) = char::from_u32(code) {
+                                                content.push(c);
+                                                i += 5; // saltar \uXXXX
+                                            } else {
+                                                // Código inválido, mantener literal
+                                                content.push('\\');
+                                                content.push('u');
+                                                i += 1;
+                                            }
+                                        } else {
+                                            // No es hex válido, mantener literal
+                                            content.push('\\');
+                                            content.push('u');
+                                            i += 1;
+                                        }
+                                    } else {
+                                        // No hay suficientes caracteres, mantener literal
+                                        content.push('\\');
+                                        content.push('u');
+                                        i += 1;
+                                    }
+                                }
+                                _ => {
+                                    // Escape no reconocido, mantener ambos caracteres
+                                    content.push('\\');
+                                    content.push(next);
+                                    i += 1;
+                                }
                             }
                         } else {
                             content.push('\\');
